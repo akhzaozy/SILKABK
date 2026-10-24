@@ -1,0 +1,131 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+@source '../**/*.vue';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* ─── Global Mobile & Safari Fixes ───────────────────────────── */
+
+/* Hilangkan highlight biru saat tap di Safari/Chrome Android */
+* {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+}
+
+/* Font rendering lebih tajam */
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Fix 100vh Safari iOS — URL bar menyebabkan 100vh terlalu tinggi */
+.min-h-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* Scroll halus di WebKit */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ─── Input / Form Safari Fixes ──────────────────────────────── */
+
+/* Hilangkan styling bawaan iOS untuk input & button */
+/* Checkbox & radio DIKECUALIKAN agar tetap bisa diklik/dicentang */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 0; /* iOS memberi radius default */
+}
+
+/* Khusus date/time input — Safari beri styling berbeda */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 2.5rem;
+}
+
+/* Pastikan checkbox & radio tetap tampil native dan bisa diklik */
+input[type="checkbox"],
+input[type="radio"] {
+    -webkit-appearance: auto;
+    appearance: auto;
+    accent-color: #2563eb; /* warna biru saat dicentang */
+    cursor: pointer;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+}
+
+/* Fix select arrow hilang di Safari */
+select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+}
+
+button {
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+/* Touch target minimum 44×44px (Apple HIG) */
+button,
+a[role="button"],
+[type="submit"],
+[type="button"],
+[type="reset"] {
+    min-height: 44px;
+}
+
+/* ─── Safe Area (iPhone notch / Dynamic Island) ──────────────── */
+
+/* Padding bawah untuk home indicator iPhone */
+.safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* ─── Tabel horizontal scroll mobile ─────────────────────────── */
+
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ─── Fix backdrop-filter Safari ─────────────────────────────── */
+
+.backdrop-blur,
+[class*="backdrop-blur"] {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
+
+/* ─── Transition performa tinggi ─────────────────────────────── */
+
+.transition-transform {
+    will-change: transform;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}

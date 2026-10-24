@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan route:list)",
+      "Bash(php artisan optimize:clear)",
+      "Bash(mv \"database/migrations/2026_04_20_054555_create_parent_guardians_table.php\" \"database/migrations/0002_01_01_000000_create_parent_guardians_table.php\")",
+      "Bash(mv \"database/migrations/2026_04_20_054555_create_therapists_table.php\" \"database/migrations/0002_01_01_000001_create_therapists_table.php\")",
+      "Bash(mv \"database/migrations/2026_04_20_054556_create_doctors_table.php\" \"database/migrations/0002_01_01_000002_create_doctors_table.php\")",
+      "Bash(mv \"database/migrations/2026_04_20_054557_create_therapy_types_table.php\" \"database/migrations/0002_01_01_000003_create_therapy_types_table.php\")",
+      "Bash(mv \"database/migrations/2026_04_20_054557_create_patients_table.php\" \"database/migrations/0003_01_01_000000_create_patients_table.php\")",
+      "Bash(mv \"database/migrations/2026_04_20_054558_create_registrations_table.php\" \"database/migrations/0004_01_01_000000_create_registrations_table.php\")",
+      "Bash(mv \"database/migrations/2026_04_20_054558_create_schedules_table.php\" \"database/migrations/0004_01_01_000001_create_schedules_table.php\")",
+      "Bash(mv \"database/migrations/2026_04_20_052631_create_payment_table.php\" \"database/migrations/0005_01_01_000000_create_payment_table.php\")",
+      "Bash(mv \"database/migrations/2026_04_20_054559_create_therapy_results_table.php\" \"database/migrations/0005_01_01_000001_create_therapy_results_table.php\")",
+      "Bash(mv \"database/migrations/2026_04_20_054600_create_medical_records_table.php\" \"database/migrations/0005_01_01_000002_create_medical_records_table.php\")",
+      "Bash(php artisan migrate:fresh)",
+      "Bash(php artisan db:seed --class=UserSeeder)",
+      "Bash(php artisan migrate:fresh --seed)",
+      "Bash(php artisan make:command FixUserProfiles)",
+      "Bash(php artisan users:fix-profiles)",
+      "Bash(dir \"c:\\xampp\\htdocs\\TA_bismillah\" /b)",
+      "Bash(dir \"c:\\xampp\\htdocs\\TA_bismillah\\document requirement\" /s /b)",
+      "Bash(git checkout \"document requirement/requirements_uptd_blkabk.md\")",
+      "Bash(php artisan make:migration create_psychologists_table)",
+      "Bash(php artisan make:model Psychologist)",
+      "Bash(php artisan migrate)",
+      "Bash(php artisan db:seed --class=TherapyTypeSeeder)",
+      "Bash(Get-ChildItem -Path \"C:\\\\xampp\\\\htdocs\\\\TA_bismillah\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash([ ! -f \"$file\" ])"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
