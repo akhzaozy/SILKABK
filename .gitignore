@@ -22,3 +22,14 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Dokumen, diagram, context, dan laporan pribadi
+/document requirement/
+CONTEXT.md
+PROGRESS.md
+activity_diagrams.md
+diagram_sistem.md
+laporan_bab3.md
+refactoring.md
+temp_app.txt
+*.pdf
