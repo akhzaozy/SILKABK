@@ -1,0 +1,150 @@
+# Deploy SILKABK + SPK Skrining Anak dalam satu stack.
+#
+# Susunan folder di server (kedua repo bersebelahan):
+#   /opt/uptd/SILKABK                  <- repo bucks23/SILKABK (branch testing-deploy)
+#   /opt/uptd/spk-skrining-anak-v2     <- repo UstadzApuy/spk-skrining-anak-v2 (branch testing-deploy)
+#
+# Jalankan dari folder ini (SILKABK/deploy):
+#   cp .env.example .env   # lalu isi
+#   docker compose up -d --build
+#
+# Semua setelan ada di file .env di folder ini. Lihat README.md.
+
+name: uptd
+
+services:
+  # ─── Database: satu PostgreSQL, dua database ────────────────
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?isi POSTGRES_PASSWORD di .env}
+      SILKABK_DB_PASSWORD: ${SILKABK_DB_PASSWORD:?isi SILKABK_DB_PASSWORD di .env}
+      SPK_DB_PASSWORD: ${SPK_DB_PASSWORD:?isi SPK_DB_PASSWORD di .env}
+      SILKABK_READER_PASSWORD: ${SILKABK_READER_PASSWORD:?isi SILKABK_READER_PASSWORD di .env}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      # Script init: membuat user & database lalu me-restore dump (hanya saat volume masih kosong)
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - ${SILKABK_DUMP:-../ta_bismillah.sql}:/dumps/silkabk.dump:ro
+      - ${SPK_DUMP:-../../spk-skrining-anak-v2/Database_UPTD_BLK-ABK.sql}:/dumps/spk.sql:ro
+    healthcheck:
+      # TCP baru terbuka setelah script init selesai, jadi backend menunggu restore selesai
+      test: ["CMD-SHELL", "pg_isready -h localhost -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  # ─── SILKABK ────────────────────────────────────────────────
+  silkabk-backend:
+    build:
+      context: ${SILKABK_PATH:-..}
+      dockerfile: docker/production/Dockerfile
+      target: backend
+    image: uptd/silkabk-backend:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_NAME: SILKABK
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${SILKABK_APP_KEY:?isi SILKABK_APP_KEY di .env}
+      APP_URL: ${SILKABK_URL:?isi SILKABK_URL di .env}
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: ${LOG_LEVEL:-warning}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: ta_bismillah
+      DB_USERNAME: silkabk_user
+      DB_PASSWORD: ${SILKABK_DB_PASSWORD}
+      SESSION_DRIVER: file
+      SESSION_SECURE_COOKIE: ${SECURE_COOKIES:-true}
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: log
+      # Integrasi SPK
+      SPK_SKRINING_URL: ${SPK_URL:?isi SPK_URL di .env}
+      SPK_SKRINING_SSO_SECRET: ${SSO_SECRET:?isi SSO_SECRET di .env}
+    volumes:
+      - silkabk-storage:/var/www/html/storage
+
+  silkabk-frontend:
+    build:
+      context: ${SILKABK_PATH:-..}
+      dockerfile: docker/production/Dockerfile
+      target: frontend
+    image: uptd/silkabk-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - silkabk-backend
+    environment:
+      PHP_FPM_HOST: silkabk-backend:9000
+    ports:
+      - "${SILKABK_BIND:-127.0.0.1}:${SILKABK_PORT:-8080}:80"
+
+  # ─── SPK Skrining Anak ──────────────────────────────────────
+  spk-backend:
+    build:
+      context: ${SPK_PATH:-../../spk-skrining-anak-v2}
+      dockerfile: docker/production/Dockerfile
+      target: backend
+    image: uptd/spk-backend:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      silkabk-backend:
+        condition: service_started
+    environment:
+      APP_NAME: "SPK Skrining Anak"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${SPK_APP_KEY:?isi SPK_APP_KEY di .env}
+      APP_URL: ${SPK_URL}
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: ${LOG_LEVEL:-warning}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: spk_uptd
+      DB_USERNAME: spk_user
+      DB_PASSWORD: ${SPK_DB_PASSWORD}
+      SESSION_DRIVER: database
+      SESSION_COOKIE: spk_skrining_session
+      SESSION_SECURE_COOKIE: ${SECURE_COOKIES:-true}
+      CACHE_STORE: database
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: log
+      # Integrasi SILKABK: SPK membaca DB SILKABK dengan user baca-saja
+      SILKABK_URL: ${SILKABK_URL}
+      SILKABK_SSO_SECRET: ${SSO_SECRET}
+      SILKABK_DB_HOST: postgres
+      SILKABK_DB_PORT: "5432"
+      SILKABK_DB_DATABASE: ta_bismillah
+      SILKABK_DB_USERNAME: silkabk_reader
+      SILKABK_DB_PASSWORD: ${SILKABK_READER_PASSWORD}
+    volumes:
+      - spk-storage:/var/www/html/storage
+
+  spk-frontend:
+    build:
+      context: ${SPK_PATH:-../../spk-skrining-anak-v2}
+      dockerfile: docker/production/Dockerfile
+      target: frontend
+    image: uptd/spk-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - spk-backend
+    environment:
+      PHP_FPM_HOST: spk-backend:9000
+    ports:
+      - "${SPK_BIND:-127.0.0.1}:${SPK_PORT:-8081}:80"
+
+volumes:
+  pgdata:
+  silkabk-storage:
+  spk-storage:

@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Percayai reverse proxy (Nginx/HTTPS di server) agar URL & redirect tetap https://
+        $middleware->trustProxies(at: '*');
+
         // Middleware global untuk Inertia
         $middleware->web(append: [
             HandleInertiaRequests::class,
