@@ -1,0 +1,90 @@
+# ════════════════════════════════════════════════════════════════
+#  SILKABK — docker compose produksi
+#
+#  Jalankan dari root repo ini:
+#      cp .env.example .env      # lalu isi (lihat DEPLOY.md)
+#      docker compose up -d --build
+#
+#  Service:
+#    db        PostgreSQL (database SILKABK). Saat pertama kali, otomatis
+#              me-restore ta_bismillah.sql dan membuat user baca-saja untuk SPK.
+#    backend   Laravel (PHP-FPM)              -> 127.0.0.1:${BACKEND_PORT}  (FastCGI)
+#    frontend  Nginx (hasil build Vue + PHP)  -> ${FRONTEND_PORT}          (HTTP)
+#
+#  Terhubung ke SPK Skrining Anak lewat jaringan Docker "uptd-network":
+#  SPK membaca database SILKABK di host "silkabk-db".
+#  Deploy repo INI lebih dulu, baru SPK.
+# ════════════════════════════════════════════════════════════════
+
+name: silkabk
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-ta_bismillah}
+      POSTGRES_USER: ${DB_USERNAME:-silkabk_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?isi DB_PASSWORD di .env}
+      # Password user baca-saja "spk_reader" yang dipakai SPK
+      SPK_READER_PASSWORD: ${SPK_READER_PASSWORD:?isi SPK_READER_PASSWORD di .env}
+    volumes:
+      - db-data:/var/lib/postgresql
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ${DB_DUMP_FILE:-./ta_bismillah.sql}:/dumps/dump:ro
+    networks:
+      default:
+      uptd:
+        aliases: [silkabk-db]
+    healthcheck:
+      # TCP baru terbuka setelah restore selesai
+      test: ["CMD-SHELL", "pg_isready -h localhost -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/production/Dockerfile
+      target: backend
+    image: silkabk-backend:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      # Nilai yang wajib di dalam Docker (menimpa .env)
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      LOG_CHANNEL: stderr
+      FPM_PORT: ${BACKEND_PORT:-8817}
+    ports:
+      - "${BACKEND_BIND:-127.0.0.1}:${BACKEND_PORT:-8817}:${BACKEND_PORT:-8817}"
+    volumes:
+      - storage:/var/www/html/storage
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/production/Dockerfile
+      target: frontend
+    image: silkabk-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      PHP_FPM_HOST: backend:${BACKEND_PORT:-8817}
+    ports:
+      - "${FRONTEND_BIND:-0.0.0.0}:${FRONTEND_PORT:-8818}:80"
+
+volumes:
+  db-data:
+  storage:
+
+networks:
+  # Jaringan bersama SILKABK <-> SPK (dibuat oleh repo ini)
+  uptd:
+    name: ${UPTD_NETWORK:-uptd-network}

@@ -20,7 +20,6 @@ bootstrap/cache/*.php
 *.sql
 *.backup
 *.dump
-deploy
 document requirement
 isi_bab*.html
 *.pdf
