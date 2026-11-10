@@ -1,90 +1,190 @@
-# ════════════════════════════════════════════════════════════════
-#  SILKABK — docker compose produksi
+
+# ============================================================
+# SILKABK - Docker Compose Production
+# Deployment: Portainer Git Repository
+# Branch: testing-deploy
 #
-#  Jalankan dari root repo ini:
-#      cp .env.example .env      # lalu isi (lihat DEPLOY.md)
-#      docker compose up -d --build
-#
-#  Service:
-#    db        PostgreSQL (database SILKABK). Saat pertama kali, otomatis
-#              me-restore ta_bismillah.sql dan membuat user baca-saja untuk SPK.
-#    backend   Laravel (PHP-FPM)              -> 127.0.0.1:${BACKEND_PORT}  (FastCGI)
-#    frontend  Nginx (hasil build Vue + PHP)  -> ${FRONTEND_PORT}          (HTTP)
-#
-#  Terhubung ke SPK Skrining Anak lewat jaringan Docker "uptd-network":
-#  SPK membaca database SILKABK di host "silkabk-db".
-#  Deploy repo INI lebih dulu, baru SPK.
-# ════════════════════════════════════════════════════════════════
+# Environment variables dikelola melalui Portainer.
+# Tidak memerlukan file .env fisik.
+# ============================================================
 
 name: silkabk
 
 services:
+
+  # ==========================================================
+  # DATABASE - PostgreSQL 18
+  # ==========================================================
   db:
     image: postgres:18-alpine
     restart: unless-stopped
+
     environment:
       POSTGRES_DB: ${DB_DATABASE:-ta_bismillah}
       POSTGRES_USER: ${DB_USERNAME:-silkabk_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?isi DB_PASSWORD di .env}
-      # Password user baca-saja "spk_reader" yang dipakai SPK
-      SPK_READER_PASSWORD: ${SPK_READER_PASSWORD:?isi SPK_READER_PASSWORD di .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD wajib diisi}
+      SPK_READER_PASSWORD: ${SPK_READER_PASSWORD:?SPK_READER_PASSWORD wajib diisi}
+
     volumes:
       - db-data:/var/lib/postgresql
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
       - ${DB_DUMP_FILE:-./ta_bismillah.sql}:/dumps/dump:ro
+
     networks:
       default:
       uptd:
-        aliases: [silkabk-db]
+        aliases:
+          - silkabk-db
+
     healthcheck:
-      # TCP baru terbuka setelah restore selesai
-      test: ["CMD-SHELL", "pg_isready -h localhost -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test:
+        - CMD-SHELL
+        - pg_isready -h localhost -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
       interval: 5s
       timeout: 5s
       retries: 60
+      start_period: 30s
 
+  # ==========================================================
+  # BACKEND - Laravel PHP-FPM
+  # ==========================================================
   backend:
     build:
       context: .
       dockerfile: docker/production/Dockerfile
       target: backend
+
     image: silkabk-backend:latest
     restart: unless-stopped
+
     depends_on:
       db:
         condition: service_healthy
-    env_file: .env
+
+    # Tidak menggunakan env_file: .env
+    # Semua variabel dibaca melalui Portainer.
     environment:
-      # Nilai yang wajib di dalam Docker (menimpa .env)
+
+      # Laravel
+      APP_NAME: ${APP_NAME:-Laravel}
+      APP_ENV: ${APP_ENV:-production}
+      APP_KEY: ${APP_KEY:?APP_KEY wajib diisi}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost:8818}
+
+      APP_LOCALE: ${APP_LOCALE:-en}
+      APP_FALLBACK_LOCALE: ${APP_FALLBACK_LOCALE:-en}
+      APP_FAKER_LOCALE: ${APP_FAKER_LOCALE:-en_US}
+      APP_MAINTENANCE_DRIVER: ${APP_MAINTENANCE_DRIVER:-file}
+
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-10}
+
+      # Logging
+      LOG_CHANNEL: stderr
+      LOG_STACK: ${LOG_STACK:-single}
+      LOG_DEPRECATIONS_CHANNEL: ${LOG_DEPRECATIONS_CHANNEL:-null}
+      LOG_LEVEL: ${LOG_LEVEL:-warning}
+
+      # PostgreSQL
       DB_CONNECTION: pgsql
       DB_HOST: db
       DB_PORT: "5432"
-      LOG_CHANNEL: stderr
+      DB_DATABASE: ${DB_DATABASE:-ta_bismillah}
+      DB_USERNAME: ${DB_USERNAME:-silkabk_user}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD wajib diisi}
+
+      # Session
+      SESSION_DRIVER: ${SESSION_DRIVER:-file}
+      SESSION_LIFETIME: ${SESSION_LIFETIME:-120}
+      SESSION_ENCRYPT: ${SESSION_ENCRYPT:-false}
+      SESSION_PATH: ${SESSION_PATH:-/}
+      SESSION_DOMAIN: ${SESSION_DOMAIN:-null}
+
+      # Broadcast
+      BROADCAST_CONNECTION: ${BROADCAST_CONNECTION:-log}
+
+      # Storage
+      FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+
+      # Queue
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-database}
+
+      # Cache
+      CACHE_STORE: ${CACHE_STORE:-file}
+
+      # Memcached
+      MEMCACHED_HOST: ${MEMCACHED_HOST:-127.0.0.1}
+
+      # Redis
+      REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
+      REDIS_HOST: ${REDIS_HOST:-127.0.0.1}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-null}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+
+      # Mail
+      MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_SCHEME: ${MAIL_SCHEME:-null}
+      MAIL_HOST: ${MAIL_HOST:-127.0.0.1}
+      MAIL_PORT: ${MAIL_PORT:-2525}
+      MAIL_USERNAME: ${MAIL_USERNAME:-null}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-null}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-hello@example.com}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Laravel}
+
+      # AWS
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_BUCKET: ${AWS_BUCKET:-}
+      AWS_USE_PATH_STYLE_ENDPOINT: ${AWS_USE_PATH_STYLE_ENDPOINT:-false}
+
+      # Vite
+      VITE_APP_NAME: ${VITE_APP_NAME:-Laravel}
+
+      # Integrasi SPK Skrining Anak
+      SPK_SKRINING_URL: ${SPK_SKRINING_URL:-http://localhost:8001}
+      SPK_SKRINING_SSO_SECRET: ${SPK_SKRINING_SSO_SECRET:?SPK_SKRINING_SSO_SECRET wajib diisi}
+
+      # PHP-FPM
       FPM_PORT: ${BACKEND_PORT:-8817}
+
     ports:
       - "${BACKEND_BIND:-127.0.0.1}:${BACKEND_PORT:-8817}:${BACKEND_PORT:-8817}"
+
     volumes:
       - storage:/var/www/html/storage
 
+  # ==========================================================
+  # FRONTEND - Nginx + Vue
+  # ==========================================================
   frontend:
     build:
       context: .
       dockerfile: docker/production/Dockerfile
       target: frontend
+
     image: silkabk-frontend:latest
     restart: unless-stopped
+
     depends_on:
       - backend
+
     environment:
       PHP_FPM_HOST: backend:${BACKEND_PORT:-8817}
+
     ports:
       - "${FRONTEND_BIND:-0.0.0.0}:${FRONTEND_PORT:-8818}:80"
 
+  # ==========================================================
+  # PERSISTENT VOLUMES
+  # ==========================================================
 volumes:
   db-data:
   storage:
 
+  # ==========================================================
+  # DOCKER NETWORK
+  # ==========================================================
 networks:
-  # Jaringan bersama SILKABK <-> SPK (dibuat oleh repo ini)
   uptd:
     name: ${UPTD_NETWORK:-uptd-network}
