@@ -19,10 +19,14 @@ milik server             └─ spk.domain.id ─────► spk-frontend (N
 | Service | Isi | Port |
 |---|---|---|
 | `postgres` | PostgreSQL 18, dua database | tidak dibuka ke host |
-| `silkabk-backend` | Laravel SILKABK (PHP-FPM) | internal 9000 |
-| `silkabk-frontend` | Nginx: hasil build Vue + teruskan ke backend | `127.0.0.1:8080` |
-| `spk-backend` | Laravel SPK (PHP-FPM) | internal 9000 |
-| `spk-frontend` | Nginx: hasil build Vue + teruskan ke backend | `127.0.0.1:8081` |
+| `silkabk-backend` | Laravel SILKABK (PHP-FPM) | `127.0.0.1:8817` (FastCGI) |
+| `silkabk-frontend` | Nginx: hasil build Vue + teruskan ke backend | `127.0.0.1:8818` (HTTP) |
+| `spk-backend` | Laravel SPK (PHP-FPM) | `127.0.0.1:8809` (FastCGI) |
+| `spk-frontend` | Nginx: hasil build Vue + teruskan ke backend | `127.0.0.1:8810` (HTTP) |
+
+Port backend memakai protokol **FastCGI** (bukan HTTP), jadi tidak bisa dibuka di browser;
+yang dibuka browser/proxy adalah port **frontend**. Semua port bisa diubah di `.env`
+(`SILKABK_BACKEND_PORT`, `SILKABK_FRONTEND_PORT`, `SPK_BACKEND_PORT`, `SPK_FRONTEND_PORT`).
 
 Frontend (Vue) di kedua sistem **tidak** berjalan sebagai aplikasi Node terpisah: Vue di-build oleh Vite
 saat `docker build`, lalu file statisnya disajikan Nginx. Dockerfile ada di masing-masing repo:
@@ -102,8 +106,8 @@ Tunggu sampai log berisi `NOTICE: ready to handle connections` untuk kedua backe
 
 | Subdomain | Diteruskan ke |
 |---|---|
-| `silkabk.domain.id` | `http://127.0.0.1:8080` |
-| `spk.domain.id` | `http://127.0.0.1:8081` |
+| `silkabk.domain.id` | `http://127.0.0.1:8818` |
+| `spk.domain.id` | `http://127.0.0.1:8810` |
 
 Proxy wajib meneruskan header `Host`, `X-Forwarded-For`, dan `X-Forwarded-Proto`.
 Contoh Nginx:
@@ -113,13 +117,13 @@ server {
     server_name silkabk.domain.id;
     # ... setelan SSL ...
     location / {
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:8818;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
-# Buat blok yang sama untuk spk.domain.id -> 127.0.0.1:8081
+# Buat blok yang sama untuk spk.domain.id -> 127.0.0.1:8810
 ```
 
 Kalau proxy berjalan sebagai container di jaringan Docker lain, ubah `SILKABK_BIND`/`SPK_BIND`

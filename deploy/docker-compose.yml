@@ -69,6 +69,10 @@ services:
       # Integrasi SPK
       SPK_SKRINING_URL: ${SPK_URL:?isi SPK_URL di .env}
       SPK_SKRINING_SSO_SECRET: ${SSO_SECRET:?isi SSO_SECRET di .env}
+      # Port PHP-FPM (FastCGI, bukan HTTP)
+      FPM_PORT: ${SILKABK_BACKEND_PORT:-8817}
+    ports:
+      - "${SILKABK_BIND:-127.0.0.1}:${SILKABK_BACKEND_PORT:-8817}:${SILKABK_BACKEND_PORT:-8817}"
     volumes:
       - silkabk-storage:/var/www/html/storage
 
@@ -82,9 +86,9 @@ services:
     depends_on:
       - silkabk-backend
     environment:
-      PHP_FPM_HOST: silkabk-backend:9000
+      PHP_FPM_HOST: silkabk-backend:${SILKABK_BACKEND_PORT:-8817}
     ports:
-      - "${SILKABK_BIND:-127.0.0.1}:${SILKABK_PORT:-8080}:80"
+      - "${SILKABK_BIND:-127.0.0.1}:${SILKABK_FRONTEND_PORT:-8818}:80"
 
   # ─── SPK Skrining Anak ──────────────────────────────────────
   spk-backend:
@@ -127,6 +131,10 @@ services:
       SILKABK_DB_DATABASE: ta_bismillah
       SILKABK_DB_USERNAME: silkabk_reader
       SILKABK_DB_PASSWORD: ${SILKABK_READER_PASSWORD}
+      # Port PHP-FPM (FastCGI, bukan HTTP)
+      FPM_PORT: ${SPK_BACKEND_PORT:-8809}
+    ports:
+      - "${SPK_BIND:-127.0.0.1}:${SPK_BACKEND_PORT:-8809}:${SPK_BACKEND_PORT:-8809}"
     volumes:
       - spk-storage:/var/www/html/storage
 
@@ -140,9 +148,9 @@ services:
     depends_on:
       - spk-backend
     environment:
-      PHP_FPM_HOST: spk-backend:9000
+      PHP_FPM_HOST: spk-backend:${SPK_BACKEND_PORT:-8809}
     ports:
-      - "${SPK_BIND:-127.0.0.1}:${SPK_PORT:-8081}:80"
+      - "${SPK_BIND:-127.0.0.1}:${SPK_FRONTEND_PORT:-8810}:80"
 
 volumes:
   pgdata:
