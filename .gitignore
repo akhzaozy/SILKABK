@@ -33,3 +33,16 @@ laporan_bab3.md
 refactoring.md
 temp_app.txt
 *.pdf
+
+# File env lain (.env.local, .env.testing, dll.) diabaikan,
+# tapi .env.example BOLEH ikut ke repo
+.env.*
+!.env.example
+
+# Backup database (.sql/.backup/.dump) BOLEH ikut ke repo
+
+# Setelan lokal Claude Code (panel browser, dll.)
+/.claude/
+
+# Laporan TA (bab 3/bab 4)
+isi_bab*.html
