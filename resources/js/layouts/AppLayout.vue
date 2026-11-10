@@ -116,6 +116,10 @@
           <NavItem :href="route('psychologist.medical-records.create')" label="Input Asesmen Baru" />
         </template>
 
+        <!-- ─── Sistem Lain (semua role) ──────────────────── -->
+        <NavGroup label="Sistem Lain" />
+        <NavItem :href="route('spk-skrining')" label="SPK Skrining Anak" />
+
       </nav>
 
       <!-- User Info + Logout -->

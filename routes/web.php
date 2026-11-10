@@ -16,6 +16,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TherapyTypeController;
+use App\Http\Controllers\SpkSkriningController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Guest ────────────────────────────────────────────────────
@@ -35,6 +36,9 @@ Route::middleware(['auth', 'check.active'])->group(function () {
     // Profil — semua role
     Route::get('/profile',  [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile',  [ProfileController::class, 'update'])->name('profile.update');
+
+    // Redirect ke sistem SPK Skrining Anak (aplikasi terpisah) — semua role
+    Route::get('/spk-skrining', SpkSkriningController::class)->name('spk-skrining');
 
     // ── Super Admin: kelola akun pengguna (US-03) ─────────────
     Route::middleware('role:super_admin')->group(function () {

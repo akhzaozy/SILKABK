@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    // Sistem SPK Skrining Anak (project terpisah)
+    'spk_skrining' => [
+        'url' => env('SPK_SKRINING_URL', 'http://localhost:8001'),
+        'sso_secret' => env('SPK_SKRINING_SSO_SECRET'),
+    ],
+
 ];
